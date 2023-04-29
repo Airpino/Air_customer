@@ -1,17 +1,19 @@
 ---
 title: "Customer sat Airports"
 author: "A. Irpino"
-date: "2023-03-16"
+date: "2023-04-29"
 output: 
   html_document:
     code_folding: hide
 ---
 
+Load the data and do  bit of preprocessing.
+
 ```{r setup, include=FALSE}
 library(rgl)
 library(car)
 library(stringr)
-knitr::opts_chunk$set(echo = TRUE,cache = F,message=F, warning = F)
+knitr::opts_chunk$set(echo = TRUE,cache =T,message=F, warning = F)
 knitr::knit_hooks$set(webgl = hook_webgl)
 
 #some analysis
@@ -66,7 +68,6 @@ levels(categ$SY)<-list(S_15="EST_2015",W_15="INV_2015",
                                                S_17="EST_2017",W_17="INV_2017")
 ```
 
-## Preferences
 
 ### The data
 
@@ -91,7 +92,10 @@ for(i in 1:12){
 tmp_DF<-data.frame(x=x,freq=fre,v=factor(v,levels=names(DATA)))
 
 p_means<-ggplot(tmp_DF,aes(x=x,y=freq))+geom_bar(stat="identity")+facet_grid(rows=vars(v))
+```
 
+
+```{r fig.cap="The Wasserstein barycenters of variables"}
 p_means+theme_minimal()+ scale_x_discrete(limits=c(1:10),breaks=c(1:10))+scale_y_continuous(limits=c(0,0.32),breaks = c(0,0.30))+ylab("Rel.frequency")+xlab("Rating")+
     theme(strip.text.y.right=element_text(angle = 0))
 
@@ -101,6 +105,8 @@ p_means+theme_minimal()+ scale_x_discrete(limits=c(1:10),breaks=c(1:10))+scale_y
 
 cov_mat <-cov_mat_Wass_discr(DATA)
 ```
+
+### Basic Wasserstein statistics
 
 ```{r}
 #basic statistics
@@ -124,11 +130,6 @@ tmp_DF2<-data.frame(Var=Vars,Wass_Var=VARIANCES, Wass_Std=stds,
 ```
 
 
-
-
-
-
-
 #### Wasserstein Variance, Covariance and correlation matrix
 
 ```{r}
@@ -144,7 +145,7 @@ for(i in 1:11){
 round(new_mat,3)
 colnames(new_mat)<-names(DATA)
 rownames(new_mat)<-names(DATA)
-
+new_mat2<-new_mat
 new_mat<-matrix(as.character(round(new_mat,3)),12,12)
 colnames(new_mat)<-names(DATA)
 rownames(new_mat)<-names(DATA)
@@ -159,25 +160,60 @@ for(i in 1:11){
     new_mat[j,i]<-paste0("\\textit{",new_mat[j,i], "}")
   }
 }
+new_mat2<-as.data.frame(round(new_mat2,3))
 #new_mat
 #xtable(new_mat,sanitize.text.function = identity)
 ```
 
 
+```{r}
+library(kableExtra)
+
+for (i in 1:ncol(new_mat2)) {
+  new_mat2[i,i] <- cell_spec(new_mat2[i, i], bold=T, background = "red", color = "white")
+}
+
+for (i in 1:(ncol(new_mat2)-1)) {
+  for (j in (i+1):ncol(new_mat2)){
+  new_mat2[i,j] <- cell_spec(new_mat2[i, j], bold=T, background = "yellow", color = "black")
+  }
+}
+
+kable(new_mat2, "html", escape = F,caption = "Main diagonal: Wasserstein variance. Lower triangle: covariances. Upper triangle: correlations.") %>% 
+  kable_styling(bootstrap_options = "striped", full_width = F) 
+
+```
+
+
+## MFA main results
 
 ```{r PCAs}
 #farei una PCA/interpreterei gli assi
 quantiles=25
 res<-WH.MultiplePCA_discr(Fin_tibble,list.of.vars = c(2:13),quantiles = quantiles,ncp_in = 8)
-head(res$eig,n = 15)
+kable(head(round(res$eig,3),n = 8))
 
 ```
+#### The sceeplot
 
-## Expected vs perceived quality
+
+
+```{r}
+theme_set(theme_bw(12))
+eig_vals<-data.frame(PC=paste0("Comp. ",1:15),Eigenvalue=res$eig[1:15,1])
+eig_vals$PC<-factor(eig_vals$PC,levels=paste0("Comp. ",1:15))
+scree<- ggplot(eig_vals,aes(x=PC,y=Eigenvalue,group=1))+
+  geom_point(size=2)+
+  geom_line()+xlab("")+
+  scale_x_discrete(guide = guide_axis(angle = 45))#+
+ #  labs(title="Scree plot: MFA on centered data")
+scree
+```
 
 ```{r PCA_L1_L2s}
-resL12<-WH.MultiplePCA_discr(Fin_tibble,list.of.vars = c(14:15),quantiles = 20,ncp_in = 5)
-head(resL12$eig)
+## Expected vs perceived quality
+# resL12<-WH.MultiplePCA_discr(Fin_tibble,list.of.vars = c(14:15),quantiles = 20,ncp_in = 5)
+# head(resL12$eig)
 ```
 
 ## EYE-iris plots
@@ -205,9 +241,10 @@ Performance_plot(Fin_tibble[,2:13],selected = 91,labels=labs)+
   Performance_plot(Fin_tibble[,2:13],selected = 133,labels=labs)+
     Performance_plot(Fin_tibble[,2:13],selected = 79,labels=labs)
 ```
-## The Spanish fan plots
 
+## Explaining the extracted dimensions
 
+### The Spanish fan plots
 
 ```{r}
 res2<-res
@@ -217,27 +254,91 @@ newnames <- str_replace(newnames,pattern = "[.]",replacement = " ")
 newnames <- substring(newnames, 3)
 rownames(res2$quanti.var$cor) <- newnames
 rownames(res2$global.pca$var$coord) <- newnames
-p1 <- WH.plot_multiple_Spanish.funs_2(res2,var = 1,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[1])+theme_void()+theme(legend.position = "none")
-p2 <- WH.plot_multiple_Spanish.funs_2(res2,var = 2,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[2])+theme_void()+theme(legend.position = "none")
-p3 <- WH.plot_multiple_Spanish.funs_2(res2,var = 3,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[3])+theme_void()+theme(legend.position = "none")
-p4 <- WH.plot_multiple_Spanish.funs_2(res2,var = 4,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[4])+theme_void()+theme(legend.position = "none")
-p5 <- WH.plot_multiple_Spanish.funs_2(res2,var = 5,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[5])+theme_void()+theme(legend.position = "none")
-p6 <- WH.plot_multiple_Spanish.funs_2(res2,var = 6,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[6])+theme_void()+theme(legend.position = "none")
-p7 <- WH.plot_multiple_Spanish.funs_2(res2,var = 7,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[7])+theme_void()+theme(legend.position = "none")
-p8 <- WH.plot_multiple_Spanish.funs_2(res2,var = 8,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[8])+theme_void()+theme(legend.position = "none")
-p9 <- WH.plot_multiple_Spanish.funs_2(res2,var = 9,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[9])+theme_void()+theme(legend.position = "none")
-p10 <- WH.plot_multiple_Spanish.funs_2(res2,var = 10,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[10])+theme_void()+theme(legend.position = "none")
-p11 <- WH.plot_multiple_Spanish.funs_2(res2,var = 11,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[11])+theme_void()+theme(legend.position = "none")
-p12 <- WH.plot_multiple_Spanish.funs_2(res2,var = 12,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[12])+theme_void()+theme(legend.position = "none")
-
-p1+p2+p3+p4+p5+p6+p7+p8+p9+p10+p11+p12
-
+p1 <- WH.plot_multiple_Spanish.funs_2(res2,var = 1,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[1])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
+p2 <- WH.plot_multiple_Spanish.funs_2(res2,var = 2,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[2])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
+p3 <- WH.plot_multiple_Spanish.funs_2(res2,var = 3,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[3])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
+p4 <- WH.plot_multiple_Spanish.funs_2(res2,var = 4,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[4])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
+p5 <- WH.plot_multiple_Spanish.funs_2(res2,var = 5,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[5])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
+p6 <- WH.plot_multiple_Spanish.funs_2(res2,var = 6,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[6])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
+p7 <- WH.plot_multiple_Spanish.funs_2(res2,var = 7,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[7])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
+p8 <- WH.plot_multiple_Spanish.funs_2(res2,var = 8,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[8])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
+p9 <- WH.plot_multiple_Spanish.funs_2(res2,var = 9,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[9])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
+p10 <- WH.plot_multiple_Spanish.funs_2(res2,var = 10,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[10])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
+p11 <- WH.plot_multiple_Spanish.funs_2(res2,var = 11,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[11])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
+p12 <- WH.plot_multiple_Spanish.funs_2(res2,var = 12,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[12])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
 ```
 
 
+```{r }
+p1+p2+p3+p4+p5+p6+p7+p8+p9+p10+p11+p12+ plot_layout(ncol = 4)
+
+```
+
+### Compute the correlation and plot on the correlation circle
 
 
-## CRONBACh alpha
+```{r}
+library(ggpp)
+Bstat<-m_sd_skew_NestTibb_nol(DATA)
+Scores_1_2<-res$ind$coord[,1:2]
+corr_means<-as.data.frame(cor(Bstat$means,Scores_1_2))%>% rownames_to_column()
+corr_std<-as.data.frame(cor(Bstat$stds,Scores_1_2))%>% rownames_to_column()
+corr_skew<-as.data.frame(cor(Bstat$skew,Scores_1_2))%>% rownames_to_column()
+```
+
+#### Correlation circle of Means vs Dims
+
+```{r}
+ggplot(corr_means)+
+  geom_segment(aes(x=rep(0,nrow(corr_means)),y=rep(0,nrow(corr_means)),
+                   xend=Dim.1,yend=Dim.2),
+                   arrow = arrow(length = unit(0.01, "npc"))
+                   )+
+  geom_hline(yintercept=0)+
+  geom_vline(xintercept = 0)+
+  geom_circle(aes(x0=0,y0=0,r=1), linetype='dashed')+
+  coord_fixed()+
+  geom_text_repel(aes(x=Dim.1,y=Dim.2,label = rowname),
+                  position = position_nudge_center(0.05, 0.05, 0, 0))+
+  theme_minimal()+xlab("Dim.1")+ylab("Dim.2")
+```
+
+#### Correlation circle of Standard deviations vs Dims
+
+```{r}
+ggplot(corr_std)+
+  geom_segment(aes(x=rep(0,nrow(corr_std)),y=rep(0,nrow(corr_std)),
+                   xend=Dim.1,yend=Dim.2),
+                   arrow = arrow(length = unit(0.01, "npc"))
+                   )+
+  geom_hline(yintercept=0)+
+  geom_vline(xintercept = 0)+
+  geom_circle(aes(x0=0,y0=0,r=1), linetype='dashed')+
+  coord_fixed()+
+  geom_text_repel(aes(x=Dim.1,y=Dim.2,label = rowname),
+                  position = position_nudge_center(0.05, 0.05, 0, 0))+
+  theme_minimal()+xlab("Dim.1")+ylab("Dim.2")
+```
+
+#### Correlation circle of Skewness vs Dims
+
+```{r}
+ggplot(corr_skew)+
+  geom_segment(aes(x=rep(0,nrow(corr_skew)),y=rep(0,nrow(corr_skew)),
+                   xend=Dim.1,yend=Dim.2),
+                   arrow = arrow(length = unit(0.015, "npc"))#,
+#               linewidth=0.7
+                   )+
+  geom_hline(yintercept=0)+
+  geom_vline(xintercept = 0)+
+  geom_circle(aes(x0=0,y0=0,r=1), linetype='dashed')+
+  coord_fixed()+
+  geom_text_repel(aes(x=Dim.1,y=Dim.2,label = rowname),
+                  position = position_nudge_center(0.05, 0.05, 0, 0))+
+  theme_minimal()+xlab("Dim.1")+ylab("Dim.2")
+```
+
+<!-- ## CRONBACh alpha -->
 
 ```{r}
 alpha_stats<-Cronbach_discr(Fin_tibble[,c(2:13)])
@@ -465,14 +566,14 @@ show(plot_bb_r2("BRINDISI","Business",tmp))
 
 ```{r warning=FALSE}
 
-library(plotly)
-ggplotly(ggplot(df,aes(x=.data[[names(df)[1]]], 
-              y=.data[[names(df)[2]]],color=allcat))+geom_path(show.legend = F)+
-           geom_text(aes(label=SY)))
-
-ggplotly(ggplot(df,aes(x=.data[[names(df)[1]]], 
-              y=.data[[names(df)[2]]],color=SY))+geom_point(show.legend = F,aes(text=allcat,text2=c(1:nrow(df))))
-           )
+# library(plotly)
+# ggplotly(ggplot(df,aes(x=.data[[names(df)[1]]], 
+#               y=.data[[names(df)[2]]],color=allcat))+geom_path(show.legend = F)+
+#            geom_text(aes(label=SY)))
+# 
+# ggplotly(ggplot(df,aes(x=.data[[names(df)[1]]], 
+#               y=.data[[names(df)[2]]],color=SY))+geom_point(show.legend = F,aes(text=allcat,text2=c(1:nrow(df))))
+#            )
 ```
 
 ### 3D plots
@@ -481,15 +582,15 @@ ggplotly(ggplot(df,aes(x=.data[[names(df)[1]]],
 
 
 
-fig <- plot_ly(df, x = ~Dim.1, y = ~Dim.2, z = ~Dim.3, color = ~allcat,size=1,
-               hoverinfo = 'text',
-               text = ~paste('Cat:', allcat, '<br>Sea:', SY))
-fig <- fig %>% add_markers()
-fig <- fig %>% layout(scene = list(xaxis = list(title = 'Dim.1'),
-                     yaxis = list(title = 'Dim.2'),
-                     zaxis = list(title = 'Dim.3')))
-
-fig
+# fig <- plot_ly(df, x = ~Dim.1, y = ~Dim.2, z = ~Dim.3, color = ~allcat,size=1,
+#                hoverinfo = 'text',
+#                text = ~paste('Cat:', allcat, '<br>Sea:', SY))
+# fig <- fig %>% add_markers()
+# fig <- fig %>% layout(scene = list(xaxis = list(title = 'Dim.1'),
+#                      yaxis = list(title = 'Dim.2'),
+#                      zaxis = list(title = 'Dim.3')))
+# 
+# fig
 ```
 
 ## Time series
@@ -557,19 +658,7 @@ p3
 
 # Estrai gli scores dalle due PC
 
-## Scree plot
 
-```{r}
-theme_set(theme_bw(12))
-eig_vals<-data.frame(PC=paste0("Comp. ",1:15),Eigenvalue=res$eig[1:15,1])
-eig_vals$PC<-factor(eig_vals$PC,levels=paste0("Comp. ",1:15))
-scree<- ggplot(eig_vals,aes(x=PC,y=Eigenvalue,group=1))+
-  geom_point(size=2)+
-  geom_line()+xlab("")+
-  scale_x_discrete(guide = guide_axis(angle = 45))#+
- #  labs(title="Scree plot: MFA on centered data")
-scree
-```
 
 
 ## Plot of inertia
@@ -744,7 +833,7 @@ dt<-datatable(Contr_var_1,  caption = 'Contr_vars',
 dt
 ```
 
-## Plot dei coseni al quadrato (R2)
+## Plot Squared cosines (R2)
 
 ```{r}
 # COS2_vars_1<-as.data.frame(round(res$quanti.var$cos2,4))
@@ -789,53 +878,6 @@ ggplot(correl_1_pv, aes(x=QUA,y=value))+geom_bar(stat="identity",aes(fill=value)
   theme_minimal()
 ```
 
-# Costruisci la frontiera e mettici i punti in base agli scores
-
-To be done!!
-
-```{r}
-res_L1<-WH.1d.PCA_discr(Fin_tibble, var=14, quantiles = quantiles,plots = T)
-```
-
-```{r}
-res_L2<-WH.1d.PCA_discr(Fin_tibble, var=15, quantiles = quantiles,plots = T)
-```
-
-```{r message=FALSE, warning=FALSE}
-Scores_on_1_2_FACT<-res$ind$coord[,1:2]
-Scores_on_1_2_L12<-resL12$ind$coord[,1:2]
-Scores_on_1_2_L1<-res_L1$PCAout$ind$coord[,1]
-Scores_on_1_2_L2<-res_L2$PCAout$ind$coord[,1]
-ALL_1_2<-cbind(Scores_on_1_2_FACT,Scores_on_1_2_L1,Scores_on_1_2_L2)
-colnames(ALL_1_2)<-c("Dim.1","Dim.2","L12.1","L12.2")
-ggplotly(ggplot(as.data.frame(round(ALL_1_2,3)))+geom_point(aes(x=L12.1,y=Dim.1,text=c(1:nrow(ALL_1_2)))))
-ggplotly(ggplot(as.data.frame(ALL_1_2))+geom_point(aes(x=L12.1,y=Dim.2,text=c(1:nrow(ALL_1_2)))))
-ggplotly(ggplot(as.data.frame(ALL_1_2))+geom_point(aes(x=L12.2,y=Dim.1,text=c(1:nrow(ALL_1_2)))))
-ggplotly(ggplot(as.data.frame(ALL_1_2))+geom_point(aes(x=L12.2,y=Dim.2,text=c(1:nrow(ALL_1_2)))))
-```
-
-```{r}
-df<-as.data.frame(round(ALL_1_2,3))
-
-fig <- plot_ly(df, x = ~Dim.1, y = ~Dim.2, z = ~L12.1, 
-               marker=#list(size=5,color='red'),
-               list(color=~L12.1, colorscale = c('#FFE1A1', '#683531'), showscale = TRUE,size=5),
-               hoverinfo = 'text', 
-               text = ~paste('ID:', c(1:nrow(df))))
-fig <- fig %>% add_markers()
-fig <- fig %>% layout(scene = list(xaxis = list(title = 'Dim.1'),
-                     yaxis = list(title = 'Dim.2'),
-                     zaxis = list(title = 'L1')))
-
-fig
-```
-
-```{r, webgl=TRUE}
 
 
-scatter3d(x = df$Dim.1, z = df$Dim.2, y = df$L12.1, 
-          grid = T,surface=F)
-```
-
-
-# 
+ 
