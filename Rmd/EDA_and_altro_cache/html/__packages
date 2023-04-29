@@ -23,3 +23,8 @@ nlme
 mgcv
 ggrepel
 ggforce
+ggbump
+DT
+colorspace
+kableExtra
+ggpp
