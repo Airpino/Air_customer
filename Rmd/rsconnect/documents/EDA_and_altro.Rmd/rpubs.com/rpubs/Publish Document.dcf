@@ -1,0 +1,11 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/1016180/cd4c7ae3f264496097a023d73d10bd5c
+bundleId: https://api.rpubs.com/api/v1/document/1016180/cd4c7ae3f264496097a023d73d10bd5c
+url: http://rpubs.com/A_Irpino/1016180
+when: 1678988883.61646
+lastSyncTime: 1678988883.61646
