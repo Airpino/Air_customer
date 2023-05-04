@@ -7,13 +7,13 @@ output:
     code_folding: hide
 ---
 
-Load the data and do  bit of preprocessing.
+Load the data and do bit of preprocessing.
 
 ```{r setup, include=FALSE}
 library(rgl)
 library(car)
 library(stringr)
-knitr::opts_chunk$set(echo = TRUE,cache =T,message=F, warning = F)
+knitr::opts_chunk$set(echo = TRUE,cache =F,message=F, warning = F)
 knitr::knit_hooks$set(webgl = hook_webgl)
 
 #some analysis
@@ -68,7 +68,6 @@ levels(categ$SY)<-list(S_15="EST_2015",W_15="INV_2015",
                                                S_17="EST_2017",W_17="INV_2017")
 ```
 
-
 ### The data
 
 ```{r}
@@ -93,7 +92,6 @@ tmp_DF<-data.frame(x=x,freq=fre,v=factor(v,levels=names(DATA)))
 
 p_means<-ggplot(tmp_DF,aes(x=x,y=freq))+geom_bar(stat="identity")+facet_grid(rows=vars(v))
 ```
-
 
 ```{r fig.cap="The Wasserstein barycenters of variables"}
 p_means+theme_minimal()+ scale_x_discrete(limits=c(1:10),breaks=c(1:10))+scale_y_continuous(limits=c(0,0.32),breaks = c(0,0.30))+ylab("Rel.frequency")+xlab("Rating")+
@@ -128,7 +126,6 @@ tmp_DF2<-data.frame(Var=Vars,Wass_Var=VARIANCES, Wass_Std=stds,
                     Means=round(WM_means,3),Stds=round(WM_stds,3),Skew=round(WM_skew,3))
 
 ```
-
 
 #### Wasserstein Variance, Covariance and correlation matrix
 
@@ -165,7 +162,6 @@ new_mat2<-as.data.frame(round(new_mat2,3))
 #xtable(new_mat,sanitize.text.function = identity)
 ```
 
-
 ```{r}
 library(kableExtra)
 
@@ -184,7 +180,6 @@ kable(new_mat2, "html", escape = F,caption = "Main diagonal: Wasserstein varianc
 
 ```
 
-
 ## MFA main results
 
 ```{r PCAs}
@@ -194,9 +189,8 @@ res<-WH.MultiplePCA_discr(Fin_tibble,list.of.vars = c(2:13),quantiles = quantile
 kable(head(round(res$eig,3),n = 8))
 
 ```
+
 #### The sceeplot
-
-
 
 ```{r}
 theme_set(theme_bw(12))
@@ -268,14 +262,12 @@ p11 <- WH.plot_multiple_Spanish.funs_2(res2,var = 11,multi = T,corplot = T)+xlim
 p12 <- WH.plot_multiple_Spanish.funs_2(res2,var = 12,multi = T,corplot = T)+xlim(c(-1,1))+ylim(c(-1,1))+ggtitle(names(Fin_tibble[2:13])[12])+theme_void()+theme(legend.position = "none")+theme(plot.title = element_text(hjust = 0.5))
 ```
 
-
 ```{r }
 p1+p2+p3+p4+p5+p6+p7+p8+p9+p10+p11+p12+ plot_layout(ncol = 4)
 
 ```
 
 ### Compute the correlation and plot on the correlation circle
-
 
 ```{r}
 library(ggpp)
@@ -358,7 +350,6 @@ colnames(mat_m)<-colnames(mat_s)<-colnames(mat_sk)<-c("Dim.1", "Dim.2")
 rownames(mat_m)<-rownames(mat_s)<-rownames(mat_sk)<-names(Fin_tibble[,2:13])
 ```
 
-
 ```{r}
 tmp_df<-data.frame(mat_m) %>% tibble::rownames_to_column() %>% mutate(inix=0,iniy=0)
 options(ggrepel.max.overlaps = Inf)
@@ -397,17 +388,14 @@ pp3<-ggplot(tmp_df)+
 
 ```
 
-
-
-
-# Plotterei gli EYE-iris al posto dei punti sui piani fattoriali
+# Green EYE-iris plots on the first factorial plane
 
 ```{r create_plots_and_save, message=FALSE, warning=FALSE}
  nn<-nrow(Fin_tibble)
 
 for(i in 1:nn){
   fname<-paste0("./Images/im_",i,".png")
-  pp<-Performance_plot(Fin_tibble[,2:13],selected = i,labels=labs)
+  pp<-Performance_plot(Fin_tibble[,2:13],selected = i,labels=labs,notick = T,TITLE = F)
     
 #CairoPNG(filename = fname, bg = "transparent")
 ggsave(filename = fname,
@@ -424,53 +412,93 @@ ggsave(filename = fname,
 ### The green-eye-plots on the map
 
 ```{r message=FALSE, warning=FALSE,cache=TRUE}
-sel_points<-which(rowSums(round(res$ind$cos2[,1:2],3))>0.6)
+treshold_cos_2 <- 0.5
+sel_points<-which(rowSums(round(res$ind$cos2[,1:2],3))>treshold_cos_2)
 df<-as.data.frame(res$ind$coord)
 df<-cbind(df,df_im)
 df<-cbind(df,allcat=categ$allcat,SY=categ$SY)
 df$labels<-Fin_tibble$LAB
-p<-ggplot(df,aes(x=.data[[names(df)[1]]], 
-              y=.data[[names(df)[2]]]))+
-  #geom_point()+
-  #geom_text(aes(label=ID))+
-  geom_point_img(aes(
-    x = .data[[names(df)[1]]],
-    y = .data[[names(df)[2]]],
-    img = adr
-  ), size = 1.2,alpha=0.6)+
-  theme_minimal()
+# p<-ggplot(df,aes(x=.data[[names(df)[1]]], 
+#               y=.data[[names(df)[2]]]))+
+#   #geom_point()+
+#   #geom_text(aes(label=ID))+
+#   geom_point_img(aes(
+#     x = .data[[names(df)[1]]],
+#     y = .data[[names(df)[2]]],
+#     img = adr
+#   ), size = 1.2,alpha=0.6)+
+#   theme_minimal()
 
 ```
-
 
 ```{r message=FALSE, warning=FALSE,cache=TRUE}
 #p
 
-p2<-ggplot(df[sel_points,],aes(x=.data[[names(df)[1]]], 
-              y=.data[[names(df)[2]]]))+
-  #geom_point()+
-  #geom_text(aes(label=ID))+
-  geom_point_img(aes(
-    x = .data[[names(df)[1]]],
-    y = .data[[names(df)[2]]],
-    img = adr
-  ), size = 1.2,alpha=0.6)+
-  geom_point(data=df[-sel_points,],aes(x=.data[[names(df)[1]]], 
-              y=.data[[names(df)[2]]]))+
-  theme_minimal()
-p2
+# p2<-ggplot(df[sel_points,],aes(x=.data[[names(df)[1]]], 
+#               y=.data[[names(df)[2]]]))+
+#   #geom_point()+
+#   #geom_text(aes(label=ID))+
+#   geom_point_img(aes(
+#     x = .data[[names(df)[1]]],
+#     y = .data[[names(df)[2]]],
+#     img = adr
+#   ), size = 1.2,alpha=0.6)+
+#   geom_point(data=df[-sel_points,],aes(x=.data[[names(df)[1]]], 
+#               y=.data[[names(df)[2]]]))+
+#   theme_minimal()
 ```
-
 
 ```{r message=FALSE, warning=FALSE,cache=TRUE}
-p2+geom_hline(yintercept = 0)+geom_vline(xintercept=0)+theme_minimal()+xlab("Dim. 1 (34.4%)")+ylab("Dim. 2 (9.4%)")+ggtitle("First factor plane. Expl. inertia (43.8%)")
+# p2+geom_hline(yintercept = 0)+geom_vline(xintercept=0)+theme_minimal()+xlab("Dim. 1 (34.4%)")+ylab("Dim. 2 (9.4%)")+ggtitle("First factor plane. Expl. inertia (43.8%)")+theme(plot.title=element_text(hjust=0.5))
 ```
+```{r}
+library(ggimg)
+library(ggpubr)
+library(grid)
+# create a list of grobs
+grobs<-list()
+alpha<-0.7
+for (i in 1:nrow(df)){
+  img <-png::readPNG(df$adr[i])
+img[,,4]<-img[,,4]*alpha
+grobs[[i]]<-rasterGrob(img)
+}
+
+```
+
+```{r}
+r1<-range(df$Dim.1)
+r2<-range(df$Dim.2)
+selected<-sel_points
+al<-rep(1,nrow(df))
+al[selected]<-0.05
+p0<-ggplot(df,aes(x=Dim.1,y=Dim.2))+geom_point(aes(alpha=al),show.legend = F)+geom_vhlines(xintercept = 0,yintercept = 0)
+
+size_mult<-0.7
+for(i in selected){
+  p0<-p0+
+    annotation_custom(grobs[[i]], 
+                      xmin=df$Dim.1[i]-size_mult, 
+                      xmax=df$Dim.1[i]+size_mult, 
+                      ymin=df$Dim.2[i]-size_mult, 
+                      ymax=df$Dim.2[i]+size_mult)
+}
+```
+
+
+```{r}
+pfin<-p0+theme_minimal()+
+  lims(x= r1+c(-size_mult,size_mult), y = r2+c(-size_mult,size_mult))+
+  xlab("Dim. 1 (34.4%)")+ylab("Dim. 2 (9.4%)")+ggtitle("First factor plane. Expl. inertia (43.8%)")+theme(plot.title=element_text(hjust=0.5))
+pfin
+```
+
 
 ## A plot with background eyes
 
 ![First plane of MFA](newplot_1.png)
 
-## Scores of individuals in the first two dimensions
+## Scores of individuals for the first two dimensions
 
 ```{r scores_12}
 scores<-data.frame(res$ind$coord[,1:2])
@@ -490,8 +518,8 @@ sc_1
 sc_2
 
 ```
-cc
 
+cc
 
 ### a tentative with trajectories (longitudinal)
 
@@ -502,6 +530,7 @@ tmp<-scores %>% group_by(SY) %>% mutate(r1 = rank(rank1),r2 = rank(rank2))
 tmp$NN<-sapply(tmp$allcat,FUN = function(x) sum(x == tmp$allcat))
 
 ```
+
 ```{r}
 library(ggbump)
 airport<-"BARI"
@@ -562,7 +591,6 @@ show(plot_bb_r2("BRINDISI","Leisure",tmp))
 show(plot_bb_r2("BRINDISI","Business",tmp))
 
 ```
-
 
 ```{r warning=FALSE}
 
@@ -657,9 +685,6 @@ p3
 ```
 
 # Estrai gli scores dalle due PC
-
-
-
 
 ## Plot of inertia
 
@@ -877,7 +902,3 @@ ggplot(correl_1_pv, aes(x=QUA,y=value))+geom_bar(stat="identity",aes(fill=value)
   scale_fill_gradient2(low = "red",mid = "white",high = "darkgreen",midpoint = 0,limits=c(-1,1))+
   theme_minimal()
 ```
-
-
-
- 
