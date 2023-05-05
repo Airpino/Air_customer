@@ -397,22 +397,22 @@ pp3<-ggplot(tmp_df)+
 # Green EYE-iris plots on the first factorial plane
 
 ```{r create_plots_and_save, message=FALSE, warning=FALSE}
- nn<-nrow(Fin_tibble)
-
-for(i in 1:nn){
-  fname<-paste0("./Images/im_",i,".png")
-  pp<-Performance_plot(Fin_tibble[,2:13],selected = i,labels=labs,notick = T,TITLE = F)
-    
-#CairoPNG(filename = fname, bg = "transparent")
-ggsave(filename = fname,
-       plot = pp,
-       width = 3, 
-       height = 3,
-       dpi=100#,bg='transparent'
-      )
-}
-
- df_im<-data.frame(ID=c(1:nn)) %>% mutate(adr=paste0("./Images/im_",ID,".png"))
+#  nn<-nrow(Fin_tibble)
+# 
+# for(i in 1:nn){
+#   fname<-paste0("./Images/im_",i,".png")
+#   pp<-Performance_plot(Fin_tibble[,2:13],selected = i,labels=labs,notick = T,TITLE = F)
+#     
+# #CairoPNG(filename = fname, bg = "transparent")
+# ggsave(filename = fname,
+#        plot = pp,
+#        width = 3, 
+#        height = 3,
+#        dpi=100#,bg='transparent'
+#       )
+# }
+# 
+#  df_im<-data.frame(ID=c(1:nn)) %>% mutate(adr=paste0("./Images/im_",ID,".png"))
 ```
 
 ### The green-eye-plots on the map
@@ -509,7 +509,7 @@ pfin
 ```{r scores_12}
 scores<-data.frame(res$ind$coord[,1:2])
 scores$Dim.1<-scores$Dim.1/sqrt(res$eig[1,1])
-scores$Dim.2<--scores$Dim.2/sqrt(res$eig[2,1])#reversed beacuse right skewness is preferred
+scores$Dim.2<--scores$Dim.2/sqrt(res$eig[2,1])#reversed because right skewness is preferred
 scores$rank1<-rank(-scores$Dim.1)
 scores$rank2<-rank(-scores$Dim.2)
 scores$labels<-labs
@@ -534,13 +534,16 @@ scores$allcat<-df$allcat
 scores$SY<-df$SY
 tmp<-scores %>% group_by(SY) %>% mutate(r1 = rank(rank1),r2 = rank(rank2))
 tmp$NN<-sapply(tmp$allcat,FUN = function(x) sum(x == tmp$allcat))
-
+dfdf<-data.frame(CLASSES=cut(tmp$Dim.2,breaks = c(floor(quantile(tmp$Dim.2,probs = 0)*100)/100,round(quantile(tmp$Dim.1,probs = c(1:5)/5),2))),vals=tmp$Dim.2)
+tmp$QUA2<-dfdf$CLASSES
 ```
 
 ```{r}
 library(ggbump)
 airport<-"BARI"
 motivation<-"Leisure"
+
+
 plot_bb_r1<-function(airport,motivation,tmp){
 tmpdf<-tmp %>% filter(grepl(motivation,allcat),grepl(airport,allcat),NN==6) %>% 
   mutate(label=gsub(pattern=paste0(airport,"_"),replacement="",allcat),
@@ -559,6 +562,8 @@ gb_1<-ggplot(tmpdf, aes(x=SY, y=r1, color = label,group=label)) +
         panel.grid.major = element_blank()) +
   scale_y_reverse()+ggtitle(paste0(motivation," ",airport))
 }
+
+
 plot_bb_r2<-function(airport,motivation,tmp){
 tmpdf<-tmp %>% filter(grepl(motivation,allcat),grepl(airport,allcat),NN==6) %>% 
   mutate(label=gsub(pattern=paste0(airport,"_"),replacement="",allcat),
@@ -579,22 +584,184 @@ gb_1<-ggplot(tmpdf, aes(x=SY, y=r2, color = label,group=label)) +
 }
 ```
 
-### First dimension Bumping plots
+```{r bump_enhance}
+plot_bb_r1_2<-function(airport,motivation,tmp){
+tmpdf<-tmp %>% filter(grepl(motivation,allcat),grepl(airport,allcat),NN==6) %>% 
+  mutate(label=gsub(pattern=paste0(airport,"_"),replacement="",allcat),
+         label=gsub(pattern=paste0("_",motivation),replacement="",label),
+         label_left=paste0(label,"  ",r1,"  "),label_right=paste0("  ",r1,"  ",label),
+         label_left=gsub(pattern="ROMA_",replacement="Rome ",label_left),
+         label_left=gsub(pattern="MILANO_",replacement="Milan ",label_left),
+         label_left=gsub(pattern="OTH_NAZ_",replacement="Italy ",label_left),
+         label_left=gsub(pattern="INTERN_",replacement="Intern. ",label_left),
+         label_left=gsub(pattern="ALITALIA",replacement="ALI",label_left),
+         label_left=gsub(pattern="RYANAIR",replacement="RYN",label_left),
+         label_left=gsub(pattern="OTHER",replacement="OTH",label_left),
+         label_right=gsub(pattern="ROMA_",replacement="Rome ",label_right),
+         label_right=gsub(pattern="MILANO_",replacement="Milan ",label_right),
+         label_right=gsub(pattern="OTH_NAZ_",replacement="Italy ",label_right),
+         label_right=gsub(pattern="INTERN_",replacement="Intern. ",label_right),
+         label_right=gsub(pattern="ALITALIA",replacement="ALI",label_right),
+         label_right=gsub(pattern="RYANAIR",replacement="RYN",label_right),
+         label_right=gsub(pattern="OTHER",replacement="OTH",label_right),
+         ) %>% 
+  mutate(lb2=case_when(
+    QUA2==levels(tmp$QUA2)[1]~ "--",
+    QUA2==levels(tmp$QUA2)[2]~ "-",
+    QUA2==levels(tmp$QUA2)[3]~ "o",
+    QUA2==levels(tmp$QUA2)[4]~ "+",
+    QUA2==levels(tmp$QUA2)[5]~ "++"
+  )) %>% 
+  mutate(SY = fct_recode(SY, "Summer 15" = "S_15",
+                         "Winter 15" = "W_15",
+                         "Summer 16" = "S_16",
+                         "Winter 16" = "W_16",
+                         "Summer 17" = "S_17",
+                         "Winter 17" = "W_17")
+  )
+#browser()
+
+gb_1<-ggplot(tmpdf, aes(x=SY, y=r1, color = label,group=label)) +
+  geom_point(size = 4,alpha=0.8)+
+  geom_bump(size=2,smooth = 8,alpha=0.8)+
+  geom_text(aes(label=lb2),color="black",hjust = 0.5,vjust = 0.4)+
+  geom_text(data = tmpdf %>% filter(SY=="Summer 15"),
+            aes(x = SY  , label = label_left), size = 4, hjust = 1.1)+
+    geom_text(data = tmpdf %>% filter(SY=="Winter 17"),
+            aes(x = SY , label = label_right), size = 4, hjust = 0)+
+    
+  scale_x_discrete(expand = expansion(add = 2))+ 
+  xlab("Season")+ylab("Ranks for destination and company")+
+    #theme_void()+
+  theme(legend.position = "none",
+        panel.grid.major.y  = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        #axis.text.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks.y =element_blank(),
+      #axis.title.x=element_blank(),
+      #axis.title.y=element_blank(),
+      #legend.position="none",
+      panel.background=element_blank(),
+      panel.border=element_blank(),
+      #panel.grid.major=element_blank(),
+      panel.grid.minor=element_blank(),
+      plot.background=element_blank()) +
+  scale_y_reverse()+ggtitle(paste0(motivation," ",airport))
+}
+
+```
+### Plot of the top and worse tens for Dim.1
 
 ```{r}
-show(plot_bb_r1("BARI","Leisure",tmp))
-show(plot_bb_r1("BARI","Business",tmp))
-show(plot_bb_r1("BRINDISI","Leisure",tmp))
-show(plot_bb_r1("BRINDISI","Business",tmp))
+# grobs qui ci sono i plottini
+tmpdf<-tmp %>%  
+  mutate(label=allcat,
+#         label=gsub(pattern=paste0("_",motivation),replacement="",label),
+label=paste0(label," ",SY),
+         label_left=paste0(label,"  ",rank1,"  "),
+         label_left=gsub(pattern="ROMA_",replacement="Rome ",label_left),
+         label_left=gsub(pattern="MILANO_",replacement="Milan ",label_left),
+         label_left=gsub(pattern="OTH_NAZ_",replacement="Italy ",label_left),
+         label_left=gsub(pattern="INTERN_",replacement="Intern. ",label_left),
+         label_left=gsub(pattern="ALITALIA",replacement="ALI",label_left),
+         label_left=gsub(pattern="RYANAIR",replacement="RYN",label_left),
+         label_left=gsub(pattern="OTHER",replacement="OTH",label_left),
+label_left=gsub(pattern="_",replacement=" ",label_left),
+label_left=gsub(pattern="BRINDISI",replacement="BRI",label_left),
+label_left=gsub(pattern="Leisure",replacement="Leis.",label_left),
+label_left=gsub(pattern="Business",replacement="Bus.",label_left)
+         )
+
+top_worse_10<-tmpdf %>% ungroup()%>% mutate(ID=c(1:nrow(tmp))) %>% filter(rank1<11 | rank1>nrow(tmpdf)-10) %>% select(rank1,ID,label_left) %>% arrange(rank1) %>%  
+  mutate(y=c(1:20),
+         xco=if_else(y<11,1,2),
+         x=if_else(y<11,"Top 10","Worse 10"),
+         x=factor(x,levels=c("Top 10","Worse 10")),
+         y=if_else(y<11,11-y,21-y),)
+#%>% mutate(rank1=11-rank1)
+selected<-top_worse_10$ID
+
+
+p0_0<-ggplot(top_worse_10,aes(x=xco,y=y))+geom_point(alpha=0)
 ```
 
-### Second dimension Bumping plots
 
 ```{r}
-show(plot_bb_r2("BARI","Leisure",tmp))
-show(plot_bb_r2("BARI","Business",tmp))
-show(plot_bb_r2("BRINDISI","Leisure",tmp))
-show(plot_bb_r2("BRINDISI","Business",tmp))
+size_mult<-0.7
+co<-0
+for(i in selected){
+  co<-co+1
+  p0_0<-p0_0+
+    annotation_custom(grobs[[i]], 
+                      xmin=top_worse_10$xco[co]-0.6, 
+                      xmax=top_worse_10$xco[co]+0.6, 
+                      ymin=top_worse_10$y[co]-0.6, 
+                      ymax=top_worse_10$y[co]+0.6)
+}
+```
+
+
+```{r}
+p0_0<-
+  p0_0+geom_text(aes(y = y ,x=xco , label = label_left), size = 3, hjust = 1.1)+
+    xlim(c(0,2))+
+    scale_x_continuous(limits = c(0,2),breaks=c(1,2),labels=c("1" = "Top 10", "2" = "Worse 10"))+
+    theme(legend.position = "none",
+        panel.grid.major.y  = element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        #axis.text.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks.y =element_blank(),
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      #legend.position="none",
+      panel.background=element_blank(),
+      panel.border=element_blank(),
+      #panel.grid.major=element_blank(),
+      panel.grid.minor=element_blank(),
+      plot.background=element_blank())
+       
+ggsave("TOPW10.png",p0_0,device = "png",width = 1800,height = 1600,units = "px",dpi=320)
+
+```
+
+
+
+### First dimension Bumping plots
+
+
+
+```{r}
+BLp<-plot_bb_r1_2("BARI","Leisure",tmp)
+BBp<-(plot_bb_r1_2("BARI","Business",tmp))
+BrLp<-(plot_bb_r1_2("BRINDISI","Leisure",tmp))
+BrBp<-(plot_bb_r1_2("BRINDISI","Business",tmp))
+```
+
+
+```{r}
+BLp
+BBp
+BrLp
+BrBp
+```
+
+
+```{r}
+ggsave("Ba_Le.png",BLp,device = "png",width = 2400,height = 1600,units = "px",dpi=320)
+ggsave("Ba_Bu.png",BBp,device = "png",width = 2400,height = 1600,units = "px",dpi=320)
+ggsave("Br_Le.png",BrLp,device = "png",width = 2400,height = 1600,units = "px",dpi=320)
+ggsave("Br_Bu.png",BrBp,device = "png",width = 2400,height = 1600,units = "px",dpi=320)
+```
+
+<!-- ### Second dimension Bumping plots -->
+
+```{r}
+# show(plot_bb_r2("BARI","Leisure",tmp))
+# show(plot_bb_r2("BARI","Business",tmp))
+# show(plot_bb_r2("BRINDISI","Leisure",tmp))
+# show(plot_bb_r2("BRINDISI","Business",tmp))
 
 ```
 
@@ -635,6 +802,13 @@ show(plot_bb_r2("BRINDISI","Business",tmp))
 # PATH="Images/im_2.png"
 # df_ts$E_15[1]<-paste0("<img src=\"",df_ts$E_15[1],"\" height=\"52\"></img>")
 # df_ts$E_15[2]<-paste0("<img src=\"",PATH,"\" height=\"52\"></img>")
+
+# annotation_custom(grobs[[i]], 
+#                       xmin=df$Dim.1[i]-size_mult, 
+#                       xmax=df$Dim.1[i]+size_mult, 
+#                       ymin=df$Dim.2[i]-size_mult, 
+#                       ymax=df$Dim.2[i]+size_mult)
+
 df_3<-df %>% filter(grepl("BARI",allcat))%>%filter(grepl("Leisure",allcat))%>%  select(adr, allcat,SY)
 p2<-ggplot(df_3,aes(x=SY, 
               y=allcat))+
