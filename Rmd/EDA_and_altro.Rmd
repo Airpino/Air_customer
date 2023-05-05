@@ -1,6 +1,6 @@
 ---
 title: "Customer sat Airports"
-author: "A. Irpino"
+author: "A. Irpino, C. Marin, C.Crocetta"
 date: "2023-04-29"
 output: 
   html_document:
@@ -74,11 +74,17 @@ levels(categ$SY)<-list(S_15="EST_2015",W_15="INV_2015",
 DATA<-Fin_tibble[,2:13]
 means_of_v<-list()
 means_of_v_d<-list()
+medians<-medians2<-numeric()
 for(i in 1:12){
   tmp<-mean_bargraph(DATA[,i])
+  medians<-c(medians,extract_quantiles(tmp,p=0.5))
+  
   means_of_v[[i]]<-tmp
-  means_of_v_d[[i]]<-Discretize_a_distr(tmp)
+  tmp2<-Discretize_a_distr(tmp)
+  means_of_v_d[[i]]<-tmp2
+  medians2<-c(medians2,extract_quantiles(tmp2,p=0.5))
 }
+
 #create a single DF
 x<-fre<-numeric()
 v<-character()
@@ -123,8 +129,8 @@ for (i in 1:12){
 }
 
 tmp_DF2<-data.frame(Var=Vars,Wass_Var=VARIANCES, Wass_Std=stds, 
-                    Means=round(WM_means,3),Stds=round(WM_stds,3),Skew=round(WM_skew,3))
-
+                    Means=round(WM_means,3),Medians=medians2,Stds=round(WM_stds,3),Skew=round(WM_skew,3))
+knitr::kable(tmp_DF2)
 ```
 
 #### Wasserstein Variance, Covariance and correlation matrix
@@ -503,9 +509,9 @@ pfin
 ```{r scores_12}
 scores<-data.frame(res$ind$coord[,1:2])
 scores$Dim.1<-scores$Dim.1/sqrt(res$eig[1,1])
-scores$Dim.2<-scores$Dim.2/sqrt(res$eig[2,1])
+scores$Dim.2<--scores$Dim.2/sqrt(res$eig[2,1])#reversed beacuse right skewness is preferred
 scores$rank1<-rank(-scores$Dim.1)
-scores$rank2<-rank(scores$Dim.2)
+scores$rank2<-rank(-scores$Dim.2)
 scores$labels<-labs
 sc_1<-ggplot(scores)+geom_density(aes(Dim.1),fill="grey70",alpha=0.2)+
   stat_function(fun = dnorm, args = list(mean = mean(scores$Dim.1), sd = sd(scores$Dim.1)),linetype = "dashed")+theme_bw()+labs(title="Scores distribution on Dim.1")+xlab("Score on Dim. 1")+ylab("density")+theme(plot.title=element_text(hjust=0.5))
@@ -519,7 +525,7 @@ sc_2
 
 ```
 
-cc
+
 
 ### a tentative with trajectories (longitudinal)
 
@@ -548,7 +554,7 @@ gb_1<-ggplot(tmpdf, aes(x=SY, y=r1, color = label,group=label)) +
     geom_text(data = tmpdf %>% filter(SY=="W_17"),
             aes(x = SY , label = label_right), size = 3, hjust = 0)+
    scale_x_discrete(expand = expansion(add = 2))+ 
-   theme_void()+
+   #theme_void()+
   theme(legend.position = "none",
         panel.grid.major = element_blank()) +
   scale_y_reverse()+ggtitle(paste0(motivation," ",airport))
@@ -566,7 +572,7 @@ gb_1<-ggplot(tmpdf, aes(x=SY, y=r2, color = label,group=label)) +
     geom_text(data = tmpdf %>% filter(SY=="W_17"),
             aes(x = SY , label = label_right), size = 3, hjust = 0)+
    scale_x_discrete(expand = expansion(add = 2))+ 
-   theme_void()+
+   #theme_void()+
   theme(legend.position = "none",
         panel.grid.major = element_blank()) +
   scale_y_reverse()+ggtitle(paste0(motivation," ",airport))
@@ -604,7 +610,7 @@ show(plot_bb_r2("BRINDISI","Business",tmp))
 #            )
 ```
 
-### 3D plots
+<!-- ### 3D plots -->
 
 ```{r 3d_plots, warning=FALSE}
 
@@ -684,7 +690,7 @@ p3
 
 ```
 
-# Estrai gli scores dalle due PC
+# Scores
 
 ## Plot of inertia
 
@@ -902,3 +908,35 @@ ggplot(correl_1_pv, aes(x=QUA,y=value))+geom_bar(stat="identity",aes(fill=value)
   scale_fill_gradient2(low = "red",mid = "white",high = "darkgreen",midpoint = 0,limits=c(-1,1))+
   theme_minimal()
 ```
+
+## SCORES
+
+The first two dimensions are relevant. We reverse the second dimension for simplicity -->
+
+```{r}
+ SC<-data.frame(Dim_1=res$ind$coord[,1],Dim_2=-res$ind$coord[,2]) %>% 
+   mutate(Dim_st_1=Dim_1/sd(Dim_1),Dim_st_2=Dim_2/sd(Dim_2),
+          Dim_scal_1=(Dim_1-min(Dim_1))/diff(range(Dim_1)),
+          Dim_scal_2=(Dim_2-min(Dim_2))/diff(range(Dim_2)),
+          ) %>% rownames_to_column()
+```
+
+```{r}
+# ggplot(DEASC, aes(x=Dim_scal_1,y=Dim_scal_2))+geom_point()+geom_vhlines(xintercept = 0,yintercept = 0)
+# ggplot(DEASC, aes(x=L1_scal_1,y=L1_scal_2))+geom_point()+geom_vhlines(xintercept = 0,yintercept = 0)
+```
+<!-- ### identify the frontier -->
+
+```{r}
+# library(deaR)
+# ddata<-make_deadata(DEASC,dmus = 1,inputs =c(6:7),outputs = c(10:11))
+# bas_mod<-model_additive(ddata,orientation = "oo")
+```
+
+```{r}
+# library(rDEA)
+# Y <- DEASC[c('L1_st_1')]
+# X <- DEASC[c('Dim_st_1','Dim_st_2')]
+# di = dea.robust(X=X, Y=Y, model="input", RTS="variable", B=1000)
+```
+

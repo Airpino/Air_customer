@@ -141,7 +141,13 @@ hexa_tibb<-hexa_tibb %>% mutate(labels=labels,
                                 coor_x=new_points_x,
                                 coor_y=new_points_y)#add the coordinates
 
-
+BSTAT_hexa<-m_sd_skew_NestTibb_nol(hexa_tibb[,1:12])
+SKEWM<-as.data.frame(cbind(BSTAT_hexa$skew,hexa_tibb$coor_y))
+SKEWM %>% group_by(V13) %>% 
+  summarize(B1=mean(B1),B2=mean(B2),C1=mean(C1),D1=mean(D1),D2=mean(D2),
+            E1=mean(E1),E2=mean(E2),E3=mean(E3),E4=mean(E4),
+            F1=mean(F1),F2=mean(F2),F3=mean(F3))
+stop()
 ## Fine nuova tibble per plots ----
 correla<-corr_mat_Wass_discr(Fin_tibble[,2:13])
 hclu_v<-hclust(as.dist(sqrt(2*(1-correla))),method = "single")
