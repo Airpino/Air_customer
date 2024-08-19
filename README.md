@@ -2,12 +2,12 @@
 
 This repository contains the results of the analysis related to the paper:
 
-Title: A performance indicator and its decomposition according to the impacts of different aspects based on distributional data
+- Title: __A performance indicator and its decomposition according to the impacts of different aspects based on distributional data__
 
-Authors: Crocetta C., Irpino A., Antonucci L., Marin C.
+- Authors: Crocetta C., Irpino A., Antonucci L., Marin C.
 
-Submitted to Quality and Quantity, Springer, February 2024 
+- Submitted to Quality and Quantity, Springer, February 2024 
 
-Published on October 2024
+- Published on October 2024
 
-DOI: DOI: 10.1007/s11135-024-01956-0
+- DOI: DOI: 10.1007/s11135-024-01956-0
