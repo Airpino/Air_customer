@@ -10,4 +10,4 @@ This repository contains the R code and the results into a Rmd file of the stati
 
 - Published on October 2024
 
-- DOI: DOI: 10.1007/s11135-024-01956-0
+- DOI: 10.1007/s11135-024-01956-0
